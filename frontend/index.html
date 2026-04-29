@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tech Inventory Portal</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; }
+        /* Changed from 100vh to min-height to allow scrolling when list grows */
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 40px 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { color: var(--primary); margin-top: 0; border-left: 5px solid var(--accent); padding-left: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.3s; color: white; }
+        .btn-primary { background-color: var(--accent); }
+        .btn-primary:hover { background-color: #2980b9; }
+        .btn-secondary { background-color: var(--primary); }
+        .btn-secondary:hover { background-color: #1a252f; }
+        
+        #msg { margin-top: 15px; text-align: center; font-weight: 500; }
+        .error { color: #e74c3c; }
+        .success { color: #27ae60; }
+
+        /* Inventory List Styles */
+        #inventorySection { margin-top: 25px; border-top: 2px solid #eee; padding-top: 20px; display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+        th { color: var(--primary); background: #f9f9f9; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Inventory Manager</h2>
+    <p>Log a new hardware or software asset.</p>
+    
+    <label for="assetName">Asset Name</label>
+    <input type="text" id="assetName" placeholder="e.g., Ubuntu Server 01">
+    
+    <label for="assetType">Category</label>
+    <input type="text" id="assetType" placeholder="e.g., Virtual Machine">
+    
+    <div class="btn-group">
+        <button class="btn-primary" onclick="submitData()">Register Asset</button>
+        <button class="btn-secondary" onclick="fetchAssets()">View All</button>
+    </div>
+    
+    <div id="msg"></div>
+
+    <div id="inventorySection">
+        <h3>Registered Assets</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryBody">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function submitData() {
+        const name = document.getElementById('assetName').value;
+        const type = document.getElementById('assetType').value;
+        const msg = document.getElementById('msg');
+        
+        if (!name || !type) {
+            msg.innerHTML = "<span class='error'>Please fill all fields</span>";
+            return;
+        }
+
+        try {
+            const response = await fetch('http://localhost:5000/api/assets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, type })
+            });
+
+            if (response.ok) {
+                msg.innerHTML = "<span class='success'>✔ Asset registered successfully!</span>";
+                document.getElementById('assetName').value = '';
+                document.getElementById('assetType').value = '';
+                // Auto-refresh the list if it's open
+                if(document.getElementById('inventorySection').style.display === 'block') fetchAssets();
+            } else {
+                msg.innerHTML = "<span class='error'>❌ Server error occurred.</span>";
+            }
+        } catch (err) {
+            msg.innerHTML = "<span class='error'>❌ Connectivity issue (Backend down?)</span>";
+        }
+    }
+
+    async function fetchAssets() {
+        const section = document.getElementById('inventorySection');
+        const body = document.getElementById('inventoryBody');
+        const msg = document.getElementById('msg');
+
+        try {
+            const response = await fetch('http://localhost:5000/api/assets');
+            const data = await response.json();
+
+            body.innerHTML = ''; // Clear previous entries
+            section.style.display = 'block';
+
+            if (data.length === 0) {
+                body.innerHTML = '<tr><td colspan="2" style="text-align:center">No assets found</td></tr>';
+            } else {
+                data.forEach(asset => {
+                    const row = `<tr>
+                        <td>${asset.name}</td>
+                        <td>${asset.type}</td>
+                    </tr>`;
+                    body.innerHTML += row;
+                });
+            }
+            msg.innerHTML = ""; // Clear any error messages
+        } catch (err) {
+            msg.innerHTML = "<span class='error'>❌ Could not retrieve inventory.</span>";
+        }
+    }
+</script>
+
+</body>
+</html>

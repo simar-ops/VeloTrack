@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Tier 3: The Database
+  database:
+    image: mongo:latest
+    container_name: mongodb-tier
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+
+  # Tier 2: The Backend (Node.js)
+  backend:
+    build: ./backend
+    container_name: backend-tier
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://database:27017/inventory
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+  # Tier 1: The Frontend (Nginx)
+  frontend:
+    build: ./frontend
+    container_name: frontend-tier
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
